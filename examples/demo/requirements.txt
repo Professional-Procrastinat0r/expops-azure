@@ -1,0 +1,3 @@
+# Install the external plugin in the environment that executes the processes.
+# Until published, provide its wheel via PIP_FIND_LINKS or a private index.
+expops-azure==0.1.0

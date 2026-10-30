@@ -1,0 +1,32 @@
+provider: local
+num_workers: 2
+options:
+  worker_memory: 0
+  startup_timeout_sec: 120
+storage:
+  metadata:
+    type: azure-table
+    account_url: http://127.0.0.1:10002/devstoreaccount1
+    table: ExpOpsMetadata
+    connection_string_ref: &auth
+      source: environment
+      name: EXPOPS_AZURE_CONNECTION_STRING
+      required: true
+  mounts:
+    code: {type: local, source: demo, read_only: true}
+    input:
+      type: azure-blob
+      account_url: http://127.0.0.1:10000/devstoreaccount1
+      container: expops-input
+      connection_string_ref: *auth
+    cache:
+      type: azure-blob
+      account_url: http://127.0.0.1:10000/devstoreaccount1
+      container: expops-cache
+      connection_string_ref: *auth
+      policy: {ttl_hours: 24}
+    artefact:
+      type: azure-blob
+      account_url: http://127.0.0.1:10000/devstoreaccount1
+      container: expops-artefact
+      connection_string_ref: *auth

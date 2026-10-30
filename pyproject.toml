@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "expops-azure"
+version = "0.1.0"
+description = "External Azure Blob and Azure Table Storage plugins for ExpOps"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "expops>=0.1.28.dev37",
+  "azure-storage-blob>=12.24,<13",
+  "azure-data-tables>=12.6,<13",
+  "azure-identity>=1.19,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "build>=1"]
+
+[project.entry-points."expops.mounts"]
+azure-blob = "expops_azure.plugins:BLOB_PLUGIN"
+
+[project.entry-points."expops.metadata_stores"]
+azure-table = "expops_azure.plugins:TABLE_PLUGIN"
+
+[project.scripts]
+expops-azure = "expops_azure.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires Azure Storage or Azurite"]

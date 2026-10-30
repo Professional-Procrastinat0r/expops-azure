@@ -1,0 +1,28 @@
+# Copy to compute.azure.yaml and replace YOURACCOUNT in both endpoints.
+# Authentication: az login locally, or AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET
+# in every executing environment. No account keys are required.
+provider: local
+num_workers: 2
+options:
+  worker_memory: 0
+  startup_timeout_sec: 120
+storage:
+  metadata:
+    type: azure-table
+    account_url: https://YOURACCOUNT.table.core.windows.net
+    table: ExpOpsMetadata
+  mounts:
+    code: {type: local, source: demo, read_only: true}
+    input:
+      type: azure-blob
+      account_url: https://YOURACCOUNT.blob.core.windows.net
+      container: expops-input
+    cache:
+      type: azure-blob
+      account_url: https://YOURACCOUNT.blob.core.windows.net
+      container: expops-cache
+      policy: {ttl_hours: 24}
+    artefact:
+      type: azure-blob
+      account_url: https://YOURACCOUNT.blob.core.windows.net
+      container: expops-artefact

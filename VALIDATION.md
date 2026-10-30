@@ -2,10 +2,17 @@
 
 Validated on 26 October 2026 (Asia/Singapore), Windows, Python 3.14.7.
 
+This is a historical validation record, not a description of a bundled
+environment. The wheels, logs and local deployment configuration used for these
+checks are not included in this repository. Follow the README to prepare your
+own environment. Later source changes, including metadata observation support,
+require the compatible platform interfaces described there; the results below
+do not validate those changes against the historical wheel.
+
 ## Installation boundary
 
 - External distribution: `expops-azure==0.1.0`, installed as a non-editable wheel
-  in `expops-azure/.venv`.
+  in an isolated virtual environment.
 - Host platform snapshot: `expops-platform` branch `staging`, commit
   `51abb9aa3f303246df82c859688c0f534ab4a8b2`.
 - A clean `git archive HEAD` export was built outside the platform repository
@@ -68,8 +75,8 @@ plugins installed through wheels, using the Azurite configuration:
 | Second | project-azure-plugin-demo-20261025192330-b3abdfa9 | 0 | 2 | 0 | 0 |
 
 Run IDs use the platform's UTC timestamp; the Singapore calendar date is 26
-October. Logs are retained in `.build/demo-first.log`, `.build/demo-second.log`
-and `examples/.azure-plugin-demo/logs/`.
+October. These IDs identify the original local runs. Their logs were retained
+outside version control and are not available in a fresh clone.
 
 The experiment itself imports no Azure SDK. It reads the declared CSV, logs
 metrics, returns values, and consumes the predecessor result. The smoke check
@@ -80,15 +87,15 @@ separately verifies managed artefact publication and indexing.
 - At validation time PyPI's latest stable `expops` was 0.1.27, which predates the
   required extension interfaces. An unbounded dependency could select it in a
   newly created named environment. The external package now requires
-  `expops>=0.1.28.dev37`; a compatible supplied wheel is necessary until a
-  suitable platform release is published.
-- The unpublished plugin wheel must also be available to automatic environment
-  creation. The trial used `PIP_FIND_LINKS` with `dist/` and `.build/wheels/`.
+  `expops>=0.1.28.dev37`. Install a platform version with all interfaces required
+  by the current plugin; the version floor alone does not establish compatibility.
+- The plugin wheel must also be available to automatic environment creation.
+  The trial used `PIP_FIND_LINKS` with locally built plugin and platform wheels.
   Remote deployments need an accessible wheelhouse/private index or configured
   platform wheel transfer; a driver-only editable install does not prove this.
 - The ordinary CLI writes a project interpreter pointer into the current user's
-  home cache. Sandbox permission prevented this initial attempt; the CLI trial
-  needed normal user-cache write access. No platform path logic was patched.
+  home cache and needed write access to that cache. No platform path logic was
+  patched.
 - Python's wheel build initially produced restrictive temporary-file ACLs on
   Windows. Inheritance was restored on the two generated distribution files so
   the interactive user can read/install them. No general workspace ACL changes
@@ -97,8 +104,8 @@ separately verifies managed artefact publication and indexing.
   limits and cloud fault behavior remain **unverified**. Azurite is not full
   Azure parity. The explicit service-principal path has a construction unit
   test; it has not contacted Entra ID.
-- NUS SLURM, geographically separate workers, automatic remote environment
-  bootstrap, full fraud training and scale/performance benchmarks were not run.
+- Slurm clusters, geographically separate workers, automatic remote environment
+  bootstrap, full model training and scale/performance benchmarks were not run.
 - This is an independently packaged functional implementation. See README's
   scope/limits for spooling, supported operations, metadata size/query design,
   retention and concurrency boundaries.

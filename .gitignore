@@ -9,10 +9,12 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+wheelhouse/
 *.env
 !*.env.example
 examples/compute.azure.yaml
-examples/data/creditcard.csv
+examples/data/*
+!examples/data/samples.csv
 examples/.azure-plugin-demo/
 examples/.expops-sources/
 examples/demo/.azure-plugin-demo/

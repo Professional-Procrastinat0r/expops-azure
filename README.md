@@ -1,4 +1,4 @@
-# ExpOps Azure user plugins
+# ExpOps Azure storage plugins
 
 This is an independent Python distribution providing `azure-blob` filesystem
 mounts and an `azure-table` metadata backend. It registers installed entry points;
@@ -8,64 +8,55 @@ The current source additionally implements the expanded
 `MetadataStore`/`MetadataObservationStore` contract. Azure Table exposes
 `store.listen(...)` with polling, and its registered `create_reader` supports
 `open_metadata_reader(...).listen(...)` without table creation or write access.
-This needs the matching current platform source exposing
-`MetadataObservationMixin`; the historical wheel snapshot described below does
-not include this API. Observation rejects metadata mutations; provider read-only
-credentials remain the deployment permission boundary.
-
-From the FYP workspace root, the prepared Azure development environment was
-updated to editable source installs with:
-
-```powershell
-.\expops-azure\.venv\Scripts\python.exe -m pip install --no-deps --no-build-isolation -e ./expops-platform -e ./expops-azure
-```
-
-That command reuses already installed dependencies. On a fresh environment,
-install the matching platform and plugin with dependencies first. Source edits
-are picked up by newly started processes; entry-point/dependency changes still
-require reinstalling in the target environment. Restart long-running observers
-after updating either package.
+This needs an ExpOps version exposing `MetadataObservationMixin` and the
+metadata observation APIs. Observation rejects metadata mutations; provider
+read-only credentials remain the deployment permission boundary.
 
 Requires ExpOps >= `0.1.28.dev37`, exposing `MountPlugin`, `MetadataStorePlugin` and
-schema-3 storage plans. See `VALIDATION.md` for the exact tested platform snapshot.
-An older PyPI release without those interfaces is not compatible. At validation
-time PyPI's latest stable release was 0.1.27, so use the supplied compatible
-platform wheel first. A plugin cannot add interfaces missing from its host.
+schema-3 storage plans, plus the observation interfaces above. The numeric
+dependency floor alone does not guarantee those newer interfaces are present.
+See [VALIDATION.md](VALIDATION.md) for the historical tested platform snapshot and
+its limits. Use a compatible platform release, wheel, or source checkout.
 
 ## Install
 
-Use the same Python environment that runs ExpOps:
+Run these commands from this repository's root. Use the same Python environment
+that runs ExpOps. For a new environment on Windows:
 
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+On Linux/macOS, activate with `source .venv/bin/activate` instead. If ExpOps is
+already installed in a compatible environment, use that environment directly.
+Otherwise, obtain a compatible ExpOps wheel and replace the placeholder below
+with its path or URL; the wheel is not bundled in this repository:
+
+```powershell
+$expopsWheel = '<path-or-URL-to-compatible-ExpOps-wheel>'
+python -m pip install $expopsWheel
 python -m pip install .
 expops-azure --help
 ```
 
-The original validation prepared `.venv` with both distributions installed as
-wheels; the development update above now uses editable sources. You can use its executables directly without
-PowerShell activation:
+For development, install the plugin and test dependencies in editable mode:
 
 ```powershell
-.\.venv\Scripts\expops-azure.exe --help
+python -m pip install -e '.[dev]'
 ```
 
-To reproduce that environment elsewhere, install the compatible platform wheel
-provided by the platform maintainer, then this plugin wheel. For the prepared
-local trial, the platform wheel is `.build/wheels/expops-0.1.28.dev37-py3-none-any.whl`.
-It was built from an unchanged exported snapshot, not by patching the repository.
+Editable installs pick up source edits in newly started processes. Reinstall
+after entry-point or dependency changes, and restart long-running observers
+after updating either package. For a regular wheel install, rebuild and reinstall
+after source edits too.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install .build/wheels/expops-0.1.28.dev37-py3-none-any.whl dist/expops_azure-0.1.0-py3-none-any.whl
-```
-
-For development, `python -m pip install -e '.[dev]'` is convenient. For the actual
-extension test, build and install a wheel:
+To build a distributable wheel and install it into the active environment:
 
 ```powershell
 python -m pip install build
-python -m build
-python -m pip install --force-reinstall --no-deps dist/expops_azure-0.1.0-py3-none-any.whl
+python -m build --outdir wheelhouse
+python -m pip install --force-reinstall --no-deps wheelhouse/expops_azure-0.1.0-py3-none-any.whl
 ```
 
 The distribution depends on `expops`, `azure-storage-blob`, `azure-data-tables`,
@@ -131,8 +122,8 @@ $azureConfig.Replace('YOURACCOUNT', $azureAccount) | Set-Content examples/comput
 ```
 
 The generated file contains endpoints, container names and the table name, not
-passwords. The code mount points to the supplied demo. The proposed configuration
-types are implemented by this installed package, not by built-in ExpOps code.
+passwords. It is ignored by Git. The code mount points to the included demo.
+The Azure configuration types are implemented by this installed package.
 
 ### 5. Create the containers/table and upload a tiny sample
 
@@ -160,21 +151,26 @@ metadata operations, real `StepStateManager` cache publication/reuse, and
 optionally independent Dask worker processes. It prints a unique run ID and
 artefact address, and intentionally retains records/files as evidence.
 
-The experiment code imports only ExpOps and the standard library:
+The experiment code imports only ExpOps and the standard library.
+
+Build the plugin wheel as shown under Install, and copy a compatible ExpOps wheel
+into `wheelhouse/` as well. From the repository root in the activated environment:
 
 ```powershell
-$env:PIP_FIND_LINKS = "$(Resolve-Path dist) $(Resolve-Path .build/wheels)"
+$wheelhouse = (Resolve-Path wheelhouse).Path
+$env:PIP_FIND_LINKS = ([System.Uri]::new($wheelhouse + '/')).AbsoluteUri
 Set-Location examples
 expops run --project code --compute compute.azure.yaml
 expops run --project code --compute compute.azure.yaml
+Set-Location ..
 ```
 
 The demo declares a named environment with `expops-azure==0.1.0` in its
-requirements. `PIP_FIND_LINKS` makes the unpublished plugin and compatible platform
-wheels available when ExpOps creates that environment. On another machine,
-substitute your own wheelhouse/private index. Use paths without spaces for this
-simple space-separated pip setting. When using the prepared environment without
-activation, call `..\.venv\Scripts\expops.exe` from the examples directory.
+requirements. `PIP_FIND_LINKS` makes the locally built plugin and compatible
+platform wheels available when ExpOps creates that environment. On another machine,
+use an accessible wheelhouse or package index. The file URI above supports local
+paths containing spaces. Both example configurations use `provider: local`:
+computation runs on local Dask workers while storage uses Azure or Azurite.
 
 The first run reads the CSV and records results. The second should reuse cached
 process results. The tiny fixture is a storage demo, not a model-quality test.
@@ -182,7 +178,7 @@ In Azure Portal, use Storage browser/Storage Explorer to inspect the containers
 and `ExpOpsMetadata`. Row IDs are hashes; record contents are chunked UTF-8 JSON
 stored in binary properties. Metadata contains references, not model/file bytes.
 
-## Credentials for remote workers (for example NUS SLURM)
+## Credentials for remote workers
 
 Your workstation's `az login` is not a credential provisioner for remote hosts.
 For an initial remote trial, create a dedicated service principal in Azure Portal:
@@ -208,13 +204,13 @@ it does not implement custom certificate/workload-identity file relocation.
 
 Install `expops-azure` in the driver, Dask worker, and named process/reporting
 environments that use storage. The runtime descriptor declares
-`expops-azure==0.1.0`, but this trial package is **not published to PyPI**. For
-automatic worker environment preparation, put its wheel and dependencies in an
-accessible wheelhouse/private package index and configure pip there. Merely
+`expops-azure==0.1.0`. For automatic worker environment preparation, put its wheel
+and dependencies in an accessible wheelhouse/private package index and configure
+pip there. Merely
 installing an editable package on the driver is insufficient. If using
 `PIP_FIND_LINKS`, the path/URL must be accessible on the driver and workers, or
 use the platform's worker wheel packaging where supported. Start with local
-workers before changing your existing fraud/SLURM deployment.
+workers before moving to remote compute, such as a Slurm cluster or cloud hosts.
 
 ## Alternative: account-key authentication for the cloud trial
 
@@ -242,9 +238,9 @@ connection_string_ref:
   required: true
 ```
 
-The workspace's private `examples/compute.azure.yaml` has been configured with
-these references for metadata, input, cache and artefact. The public
-`compute.azure.example.yaml` remains the default Entra example.
+Add this reference to the metadata binding and each Azure mount (`input`, `cache`
+and `artefact`) in your local `examples/compute.azure.yaml`. The checked-in
+`compute.azure.example.yaml` uses Entra authentication by default.
 
 In PowerShell, prompt for the connection string without writing it into command
 history. The plaintext exists in the process environment so the SDK can use it:
@@ -252,8 +248,8 @@ history. The plaintext exists in the process environment so the SDK can use it:
 ```powershell
 $azureSecret = Read-Host 'Paste the storage connection string' -AsSecureString
 $env:EXPOPS_AZURE_CONNECTION_STRING = [System.Net.NetworkCredential]::new('', $azureSecret).Password
-.\.venv\Scripts\expops-azure.exe init --compute examples/compute.azure.yaml --sample examples/data/samples.csv
-.\.venv\Scripts\expops-azure.exe smoke --compute examples/compute.azure.yaml --workers 2
+expops-azure init --compute examples/compute.azure.yaml --sample examples/data/samples.csv
+expops-azure smoke --compute examples/compute.azure.yaml --workers 2
 ```
 
 The connection string must belong to the same account as the configured Blob
@@ -287,14 +283,16 @@ Run the demo using `compute.azurite.yaml` in place of `compute.azure.yaml` above
 `--skipApiVersionCheck` allows the current Azure SDK's service API header against
 the emulator; it does not establish full cloud feature parity.
 
-## Move the fraud sample onto Azure later
+## Use Azure storage with your own project
 
-Keep the current fraud files unchanged initially. Make a separate compute config
-with its existing compute settings and local `code` mount, selecting these Azure
-metadata/input/cache/artefact providers. Upload the real CSV under the input key
-the project declares (`creditcard.csv`); the small demo upload is a different file.
-Keep secrets in the existing private deployment environment. First run with local
-compute, then repeat on SLURM with packaged worker dependencies and credentials.
+Create a compute configuration with your project's compute settings and `code`
+mount, selecting `azure-table` for metadata and `azure-blob` for the desired
+input/cache/artefact mounts. Upload input files under the keys declared by your
+project. The `init --sample` option uploads only the included demo's
+`input/samples.csv`; upload other datasets separately using Azure tools or VFS.
+Only the small demo CSV is included in this repository and source distributions.
+Keep deployment credentials in your environment or secret manager. Validate with
+local compute before moving to remote workers with packaged dependencies.
 
 ## Scope and limits
 
@@ -330,7 +328,7 @@ compute, then repeat on SLURM with packaged worker dependencies and credentials.
 ## Tests and references
 
 ```powershell
-python -m pytest
+python -m pytest -m 'not integration'
 $env:EXPOPS_AZURE_TEST_COMPUTE = (Resolve-Path examples/compute.azurite.yaml).Path
 python -m pytest -m integration
 ```
@@ -339,7 +337,7 @@ Integration tests write uniquely named records/files to the selected test accoun
 Use a dedicated account/table/container set, not production data. All cloud setup
 commands above are manual; no cloud resources are created by running unit tests.
 
-- [ExpOps plugin contracts](../expops-platform/docs/storage-plugins.md)
+- [ExpOps plugin contracts](https://github.com/local-minima-lab/expops-platform/blob/staging/docs/storage-plugins.md)
 - [Azure Blob Python SDK](https://learn.microsoft.com/azure/storage/blobs/storage-quickstart-blobs-python)
 - [Azure Tables Python SDK](https://learn.microsoft.com/python/api/overview/azure/data-tables-readme?view=azure-python)
 - [Azure Storage account creation](https://learn.microsoft.com/azure/storage/common/storage-account-create?tabs=azure-cli)

@@ -1,7 +1,7 @@
 include README.md VALIDATION.md
 include examples/compute.azurite.yaml examples/compute.azure.example.yaml
 recursive-include examples/demo *.yaml *.py *.txt
-recursive-include examples/data *.csv
+include examples/data/samples.csv
 recursive-include tests *.py
 prune examples/.azure-plugin-demo
 prune examples/.expops-sources
